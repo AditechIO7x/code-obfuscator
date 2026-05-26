@@ -349,7 +349,7 @@ def obfuscate_php(code: str, level: int, anti_hooking: bool = False) -> str:
     if level >= 13:
         key = generate_random_string(16)
         encrypted = xor_encrypt(result, key)
-        encoded_encrypted = encode_base4(encrypted)
+        encoded_encrypted = encode_base64(encrypted)
         result = f'''<?php
 $_k = "{key}";
 $_d = base64_decode("{encoded_encrypted}");
@@ -929,7 +929,8 @@ async def root():
     </html>
     """
 
-@app.post("/api/obfuscate", response_model=ObfuscationResponse)async def obfuscate_endpoint(request: ObfuscationRequest):
+@app.post("/api/obfuscate", response_model=ObfuscationResponse)
+async def obfuscate_endpoint(request: ObfuscationRequest):
     if request.level < 1 or request.level > 15:
         raise HTTPException(status_code=400, detail="Level must be between 1 and 15")
     
