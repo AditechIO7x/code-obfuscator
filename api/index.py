@@ -47,6 +47,7 @@ def encode_base64(data: str) -> str:
 
 def decode_base64(data: str) -> str:
     return base64.b64decode(data.encode()).decode()
+
 def compress_data(data: str) -> str:
     compressed = zlib.compress(data.encode())
     return base64.b64encode(compressed).decode()
@@ -96,7 +97,8 @@ def obfuscate_python(code: str, level: int, anti_hooking: bool = False) -> str:
                 result = result.replace(f"'{s}'", f'__import__("base64").b64decode("{encoded}").decode()')
     
     if level >= 6:
-        var_map = {}        variables = re.findall(r'\b([a-zA-Z_][a-zA-Z0-9_]*)\b(?=\s*=)', result)
+        var_map = {}
+        variables = re.findall(r'\b([a-zA-Z_][a-zA-Z0-9_]*)\b(?=\s*=)', result)
         for var in set(variables):
             if var not in ['True', 'False', 'None', 'if', 'else', 'elif', 'for', 'while', 'def', 'class', 'import', 'from', 'return', 'yield', 'try', 'except', 'finally', 'with', 'as', 'pass', 'break', 'continue', 'lambda', 'and', 'or', 'not', 'in', 'is']:
                 var_map[var] = generate_variable_name()
@@ -195,10 +197,10 @@ def obfuscate_javascript(code: str, level: int, anti_hooking: bool = False) -> s
 }})();
 '''
         if level >= 11:
-        key = generate_random_string(16)
-        encrypted_chars = [ord(c) ^ ord(key[i % len(key)]) for i, c in enumerate(result)]
-        encrypted_array = '[' + ','.join(map(str, encrypted_chars)) + ']'
-        result = f'''
+            key = generate_random_string(16)
+            encrypted_chars = [ord(c) ^ ord(key[i % len(key)]) for i, c in enumerate(result)]
+            encrypted_array = '[' + ','.join(map(str, encrypted_chars)) + ']'
+            result = f'''
 (function() {{
     var _k = "{key}";
     var _d = {encrypted_array};
@@ -244,11 +246,12 @@ def obfuscate_javascript(code: str, level: int, anti_hooking: bool = False) -> s
         result = anti_hook_code + result
     
     return result
+
 def obfuscate_html(code: str, level: int, anti_hooking: bool = False) -> str:
     result = code
     
     if level >= 1:
-        result = re.sub(r'<!--[\s\S]*?-->', '', result)
+        result = re.sub(r'', '', result)
     
     if level >= 3:
         result = re.sub(r'\s+', ' ', result)
@@ -292,7 +295,8 @@ document.write(_s);
 </script></body></html>'''
     
     if level >= 13:
-        chunks = [result[i:i+200] for i in range(0, len(result), 200)]        chunk_script = 'var _h = [' + ','.join([f'"{c}"' for c in chunks]) + '];'
+        chunks = [result[i:i+200] for i in range(0, len(result), 200)]
+        chunk_script = 'var _h = [' + ','.join([f'"{c}"' for c in chunks]) + '];'
         result = f'''<html><body><script>
 {chunk_script}
 document.write(_h.join(""));
@@ -342,6 +346,7 @@ def obfuscate_php(code: str, level: int, anti_hooking: bool = False) -> str:
     if level >= 9:
         encoded = encode_base64(result)
         result = f'<?php eval(base64_decode("{encoded}")); ?>'    
+        
     if level >= 11:
         compressed = compress_data(result)
         result = f'<?php eval(gzinflate(base64_decode("{compressed}"))); ?>'
@@ -390,7 +395,8 @@ def obfuscate_ruby(code: str, level: int, anti_hooking: bool = False) -> str:
         strings = re.findall(r'["\']([^"\']*)["\']', result)
         for s in strings:
             if len(s) > 2:
-                encoded = encode_base64(s)                result = result.replace(f'"{s}"', f'Base64.decode64("{encoded}")')
+                encoded = encode_base64(s)
+                result = result.replace(f'"{s}"', f'Base64.decode64("{encoded}")')
                 result = result.replace(f"'{s}'", f'Base64.decode64("{encoded}")')
     
     if level >= 5:
@@ -488,7 +494,8 @@ String _d = new String(Base64.getDecoder().decode(_e));
         result = result.replace('\n', '\\n')
         result = result.replace('\t', '\\t')
     
-    if level >= 13:        chunks = [result[i:i+100] for i in range(0, len(result), 100)]
+    if level >= 13:
+        chunks = [result[i:i+100] for i in range(0, len(result), 100)]
         chunk_code = 'String[] _c = {' + ','.join([f'"{c}"' for c in chunks]) + '};'
         result = f'{chunk_code}\nStringBuilder _s = new StringBuilder();\nfor(String _p : _c) _s.append(_p);\n// Use _s.toString()'
     
@@ -537,7 +544,8 @@ def obfuscate_csharp(code: str, level: int, anti_hooking: bool = False) -> str:
                 char_array = ','.join([f"'{c}'" for c in s])
                 result = result.replace(f'"{s}"', f'new string(new char[]{{{char_array}}})')
     
-    if level >= 11:        result = result.replace('\n', '\\n')
+    if level >= 11:
+        result = result.replace('\n', '\\n')
         result = result.replace('\t', '\\t')
     
     if level >= 13:
@@ -586,7 +594,8 @@ def obfuscate_cpp(code: str, level: int, anti_hooking: bool = False) -> str:
                 char_array = ','.join([f"'\\x{ord(c):02x}'" for c in s])
                 result = result.replace(f'"{s}"', f'std::string({{{char_array}}}, {len(s)})')
     
-    if level >= 9:        result = result.replace('\n', '\\n')
+    if level >= 9:
+        result = result.replace('\n', '\\n')
         result = result.replace('\t', '\\t')
     
     if level >= 11:
@@ -635,7 +644,8 @@ def obfuscate_kotlin(code: str, level: int, anti_hooking: bool = False) -> str:
         strings = re.findall(r'"([^"]*)"', result)
         for s in strings:
             if len(s) > 2:
-                encoded = encode_base64(s)                result = result.replace(f'"{s}"', f'java.util.Base64.getDecoder().decode("{encoded}").toString(Charsets.UTF_8)')
+                encoded = encode_base64(s)
+                result = result.replace(f'"{s}"', f'java.util.Base64.getDecoder().decode("{encoded}").toString(Charsets.UTF_8)')
     
     if level >= 5:
         var_map = {}
@@ -733,7 +743,8 @@ def obfuscate_go(code: str, level: int, anti_hooking: bool = False) -> str:
             if len(s) > 2:
                 encoded = encode_base64(s)
                 result = result.replace(f'"{s}"', f'string(base64.StdEncoding.DecodeString("{encoded}"))')
-        if level >= 5:
+                
+    if level >= 5:
         var_map = {}
         variables = re.findall(r'\b([a-zA-Z_][a-zA-Z0-9_]*)\b(?=\s*[:=])', result)
         reserved = ['package', 'import', 'func', 'var', 'const', 'type', 'struct', 'interface', 'map', 'chan', 'go', 'defer', 'return', 'if', 'else', 'for', 'range', 'switch', 'case', 'default', 'break', 'continue', 'fallthrough', 'goto', 'select', 'nil', 'true', 'false', 'iota', 'append', 'cap', 'close', 'complex', 'copy', 'delete', 'imag', 'len', 'make', 'new', 'panic', 'print', 'println', 'real', 'recover', 'string', 'int', 'int8', 'int16', 'int32', 'int64', 'uint', 'uint8', 'uint16', 'uint32', 'uint64', 'float32', 'float64', 'complex64', 'complex128', 'bool', 'byte', 'rune', 'error', 'main', 'fmt', 'Println', 'Sprintf']
