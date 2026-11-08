@@ -803,6 +803,10 @@ async def root():
             button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 15px 40px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.2s; }
             button:hover { transform: translateY(-2px); }
             button:active { transform: translateY(0); }
+            button:disabled { opacity: 0.65; cursor: wait; transform: none; }
+            button:focus-visible, .code-output:focus-visible { outline: 3px solid #333; outline-offset: 3px; }
+            .copy-controls { margin-bottom: 15px; }
+            #copyStatus { display: block; margin-top: 8px; }
             .result { margin-top: 30px; padding: 20px; background: #f5f5f5; border-radius: 8px; display: none; }
             .result h3 { color: #667eea; margin-bottom: 15px; }
             .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
@@ -855,51 +859,64 @@ async def root():
                 <label for="antiHooking">Enable Anti-Hooking Protection (Optional)</label>
             </div>
             
-            <button onclick="obfuscateCode()">Obfuscate Code</button>
+            <button id="obfuscateButton" onclick="obfuscateCode()">Obfuscate Code</button>
             
-            <div class="loading" id="loading">
+            <div class="loading" id="loading" role="status">
                 <div class="spinner"></div>
                 <p>Obfuscating your code...</p>
             </div>
             
-            <div class="error" id="error"></div>
+            <div class="error" id="error" role="alert"></div>
             
             <div class="result" id="result">
                 <h3>Obfuscation Complete</h3>
                 <div class="stats">
                     <div class="stat-card">
                         <div class="stat-value" id="originalSize">0</div>
-                        <div class="stat-label">Original Size (bytes)</div>
+                        <div class="stat-label">Original Size (characters)</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value" id="obfuscatedSize">0</div>
-                        <div class="stat-label">Obfuscated Size (bytes)</div>
+                        <div class="stat-label">Obfuscated Size (characters)</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value" id="sizeIncrease">0%</div>
                         <div class="stat-label">Size Increase</div>
                     </div>
                 </div>
-                <div class="code-output" id="codeOutput"></div>
+                <div class="copy-controls">
+                    <button id="copyButton" onclick="copyOutput()">Copy code</button>
+                    <span id="copyStatus" role="status"></span>
+                </div>
+                <div class="code-output" id="codeOutput" tabindex="0" role="region" aria-label="Obfuscated code"></div>
             </div>
         </div>
         
         <script>
             async function obfuscateCode() {
+                const button = document.getElementById('obfuscateButton');
+                if (button.disabled) return;
+
                 const code = document.getElementById('code').value;
                 const language = document.getElementById('language').value;
-                const level = parseInt(document.getElementById('level').value);
+                const level = Number(document.getElementById('level').value);
                 const antiHooking = document.getElementById('antiHooking').checked;
                 
-                if (!code.trim()) {                    showError('Please enter some code to obfuscate');
+                if (!code.trim()) {
+                    showError('Please enter some code to obfuscate');
+                    document.getElementById('code').focus();
                     return;
                 }
                 
-                if (level < 1 || level > 15) {
-                    showError('Obfuscation level must be between 1 and 15');
+                if (!Number.isInteger(level) || level < 1 || level > 15) {
+                    showError('Enter a whole-number obfuscation level between 1 and 15');
+                    document.getElementById('level').focus();
                     return;
                 }
                 
+                button.disabled = true;
+                button.textContent = 'Obfuscating…';
+                document.getElementById('copyStatus').textContent = '';
                 document.getElementById('loading').style.display = 'block';
                 document.getElementById('result').style.display = 'none';
                 document.getElementById('error').style.display = 'none';
@@ -912,7 +929,7 @@ async def root():
                     });
                     
                     if (!response.ok) {
-                        throw new Error('Obfuscation failed');
+                        throw new Error('Obfuscation failed. Please try again.');
                     }
                     
                     const data = await response.json();
@@ -924,9 +941,28 @@ async def root():
                     document.getElementById('codeOutput').textContent = data.obfuscated_code;
                     document.getElementById('result').style.display = 'block';
                 } catch (error) {
-                    showError(error.message);
+                    showError(error.message === 'Failed to fetch' ? 'Could not connect. Check your connection and try again.' : error.message);
                 } finally {
                     document.getElementById('loading').style.display = 'none';
+                    button.disabled = false;
+                    button.textContent = 'Obfuscate Code';
+                }
+            }
+
+            async function copyOutput() {
+                const output = document.getElementById('codeOutput');
+                const status = document.getElementById('copyStatus');
+                try {
+                    await navigator.clipboard.writeText(output.textContent);
+                    status.textContent = 'Code copied.';
+                } catch {
+                    output.focus();
+                    const range = document.createRange();
+                    range.selectNodeContents(output);
+                    const selection = window.getSelection();
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    status.textContent = 'Copy unavailable. The output is selected; use your device’s copy command.';
                 }
             }
             
